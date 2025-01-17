@@ -8,7 +8,6 @@ import {
     getAllleisure,
     closeleisure,
 } from '../controllers/leisure.controllers.js';
-
 const leisureRouter = Router();
 
 leisureRouter.get('/', getAllleisure);

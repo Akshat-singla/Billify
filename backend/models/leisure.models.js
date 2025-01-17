@@ -18,7 +18,7 @@ const leisureSchema = new Schema(
             required: true,
         },
         NumberofEmi: {
-            type: String,
+            type: Number,
             required: true,
             min: 0,
             default: 1,
@@ -28,15 +28,17 @@ const leisureSchema = new Schema(
             required: true,
             min: 0,
         },
-        initialEMI: {
-            type: Number,
-            required: true,
-            min: 1,
-        },
         amount: {
+            //amount that has been paid till date
             type: Number,
             required: true,
             min: 0,
+        },
+        initialEMI: {
+            //total emis paid till now
+            type: Number,
+            required: true,
+            min: 1,
         },
         interest: {
             type: Number,

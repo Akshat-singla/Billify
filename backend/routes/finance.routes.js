@@ -8,9 +8,9 @@ import {
 import verifyJWT from '../middlewares/auth.middlewares.js';
 const financeRouter = Router();
 
-financeRouter.post('/add', verifyJWT, addFinanceEntry);
-financeRouter.get('/fetch', verifyJWT, getAllEntry);
-financeRouter.patch('/update', verifyJWT, updateEntry);
-financeRouter.delete('/delete', verifyJWT, deleteEntry);
+financeRouter.post('/add', addFinanceEntry);
+financeRouter.get('/fetch', getAllEntry);
+financeRouter.patch('/update', updateEntry);
+financeRouter.delete('/delete', deleteEntry);
 
 export default financeRouter;

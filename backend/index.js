@@ -8,7 +8,13 @@ import mogoSanitize from 'express-mongo-sanitize';
 import helmet from 'helmet';
 import hpp from 'hpp';
 import ConnectDB from './utils/database.js';
-import { userRouter, financeRouter, leisureRouter } from './routes/index.js';
+import {
+    userRouter,
+    financeRouter,
+    leisureRouter,
+    adminRouter,
+} from './routes/index.js';
+import verifyJWT, { verifyAdmin } from './middlewares/auth.middlewares.js';
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -61,8 +67,9 @@ app.use((error, req, res, next) => {
 });
 //routes
 app.use('/user', userRouter);
-app.use('/finance', financeRouter);
-app.use('/leisure', leisureRouter);
+app.use('/finance', verifyJWT, financeRouter);
+app.use('/admin', verifyAdmin, adminRouter);
+app.use('/leisure', verifyJWT, leisureRouter);
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 200,

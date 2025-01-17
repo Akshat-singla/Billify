@@ -29,6 +29,16 @@ const addFinanceEntry = async (req, res) => {
                 .status(401)
                 .json(new ApiError(401, 'database user not found'));
 
+        if (!dbUser.isSubscribed) {
+            const userFreeRecords = await leisure
+                .findById(dbUser._id)
+                .countCollections();
+            if (userFreeRecords == 3) {
+                return res
+                    .status(401)
+                    .json(new ApiError(401, 'free trial is not over!'));
+            }
+        }
         //create a schema
         const data = {
             amount,

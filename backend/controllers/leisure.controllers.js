@@ -51,7 +51,7 @@ const addleisure = async (req, res) => {
             paymentMethod,
             boundVia,
             NumberofEmi,
-            amount,
+            amount: 0,
             interest,
             principle: amount,
             initialEMI: NumberofEmi,
@@ -203,7 +203,7 @@ const closeleisure = async (req, res) => {
         const updatedEntry = await leisure.findByIdAndUpdate(
             dbEntry._id,
             {
-                $set: { status: 'closed', amount: 0, NumberofEmi: 0 },
+                $set: { status: 'closed', NumberofEmi: 0 },
             },
             { new: true }
         );
@@ -280,85 +280,110 @@ const changeLeisureStatus = async (req, res) => {
 };
 const monthlyEmi = async (req, res) => {
     const { id } = req.body;
-    if (!id)
+    if (!id) {
         return res
             .status(401)
-            .json(new ApiError(401, 'id missing for EMI updation'));
+            .json(new ApiError(401, 'ID is required for EMI calculation'));
+    }
 
     try {
         const dbleisure = await leisure.findById(id);
-        if (!dbleisure)
+
+        if (!dbleisure) {
             return res
-                .status(401)
-                .json(new ApiError(401, 'no EMI found in database'));
-
-        let updatedAmount = dbleisure.amount;
-        let updatedNumberofEmi = dbleisure.NumberofEmi - 1;
-        const paymentType = dbleisure.paymentMethod;
-        let emiCost = 0;
-
-        const principal = dbleisure.principle;
-        const initialEMI = dbleisure.initialEMI;
-        const interestRate = dbleisure.interest / 100;
-        const numberOfInstallments = dbleisure.NumberofEmi;
-
-        if (paymentType === 'emi') {
-            const monthlyInterestRate = interestRate / 12;
-
-            emiCost =
-                (principal *
-                    monthlyInterestRate *
-                    Math.pow(1 + monthlyInterestRate, numberOfInstallments)) /
-                (Math.pow(1 + monthlyInterestRate, numberOfInstallments) - 1);
-        } else if (paymentType === 'decreasing') {
-            const monthlyInterestRate = interestRate / 12;
-
-            const interestValue = updatedAmount * monthlyInterestRate;
-            emiCost = updatedAmount / numberOfInstallments + interestValue;
-
-            updatedAmount -= emiCost - interestValue;
-        } else if (paymentType === 'onepass') {
-            updatedAmount = 0;
-            updatedNumberofEmi = 0;
-        } else {
-            return res
-                .status(400)
-                .json(new ApiError(400, 'Invalid payment method'));
+                .status(404)
+                .json(new ApiError(404, 'Leisure record not found'));
         }
 
-        const updatedStatus =
-            updatedNumberofEmi <= 0 || updatedAmount <= 0 ? 'closed' : 'paid';
-
-        const updatedEntry = await leisure.findByIdAndUpdate(dbleisure._id, {
-            $set: {
-                amount: updatedAmount,
-                status: updatedStatus,
-                NumberofEmi: updatedNumberofEmi,
-                initialEMI: emiCost,
-            },
-        });
-
-        if (!updatedEntry)
+        if (dbleisure.status === 'closed')
             return res
                 .status(401)
-                .json(new ApiError(401, 'Error occurred in updating entry'));
+                .json(
+                    new ApiError(
+                        401,
+                        'leisure is already closed cant make any changes'
+                    )
+                );
 
-        return res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    'Monthly EMI paid successfully',
-                    updatedEntry
-                )
+        const monthlyInterestRate = dbleisure.interest / 100 / 12;
+        let updatedAmount = dbleisure.amount;
+        let emiAmount = 0;
+        switch (dbleisure.paymentMethod) {
+            case 'emi':
+                // Calculate fixed EMI using the formula: P * r * (1 + r)^n / ((1 + r)^n - 1)
+                emiAmount =
+                    (dbleisure.principle *
+                        monthlyInterestRate *
+                        Math.pow(
+                            1 + monthlyInterestRate,
+                            dbleisure.NumberofEmi
+                        )) /
+                    (Math.pow(1 + monthlyInterestRate, dbleisure.NumberofEmi) -
+                        1);
+                updatedAmount += emiAmount;
+                break;
+
+            case 'decreasing':
+                // Calculate reducing balance EMI
+                const principalComponent =
+                    dbleisure.principle / dbleisure.NumberofEmi;
+                const interestComponent =
+                    (dbleisure.principle - dbleisure.amount) *
+                    monthlyInterestRate;
+
+                emiAmount = principalComponent + interestComponent;
+                updatedAmount += emiAmount;
+                break;
+
+            case 'onepass':
+                emiAmount =
+                    dbleisure.principle *
+                    monthlyInterestRate *
+                    dbleisure.NumberofEmi;
+                updatedAmount = dbleisure.principle + emiAmount;
+                break;
+
+            default:
+                return res
+                    .status(400)
+                    .json(new ApiError(400, 'Invalid payment method'));
+        }
+        let updatedUser = await leisure.findByIdAndUpdate(
+            dbleisure._id,
+            {
+                $set: {
+                    amount: updatedAmount,
+                    initialEMI: dbleisure.initialEMI - 1,
+                    status: 'paid',
+                },
+            },
+            { new: true }
+        );
+
+        if (!updatedUser)
+            return res
+                .status(401)
+                .json(new ApiError(401, 'couldnot update the leisure'));
+
+        if (updatedUser.initialEMI === 0)
+            updatedUser = await leisure.findByIdAndUpdate(
+                dbleisure._id,
+                {
+                    $set: { status: 'closed' },
+                },
+                { new: true }
             );
+
+        return res.status(200).json(
+            new ApiResponse(200, 'monthly emi paid successfully', {
+                updatedUser,
+            })
+        );
     } catch (error) {
-        console.error(error);
+        console.error('EMI calculation error:', error);
         return res
             .status(500)
-            .json(
-                new ApiError(500, "Couldn't update the monthly EMI", [error])
-            );
+            .json(new ApiError(500, 'Error calculating EMI', [error]));
     }
 };
 
