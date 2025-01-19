@@ -1,7 +1,12 @@
+import React from "react";
+import { Header, Footer } from "./components/general/index.js";
+import { Outlet } from "react-router-dom";
 function App() {
   return (
     <>
-      <h1>React App</h1>
+      <Header />
+      <Outlet />
+      <Footer />
     </>
   );
 }
