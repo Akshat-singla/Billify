@@ -37,7 +37,7 @@ function Header() {
                 to={link.url}
                 className={({ isActive }) =>
                   `text-base font-medium transition-colors hover:text-[#32C944] ${
-                    isActive ? "text-[#32C944]" : "text-gray-700"
+                    isActive ? "text-[#32C944]" : "text-gray-600"
                   }`
                 }
               >
@@ -60,7 +60,7 @@ function Header() {
                 <div className="relative">
                   <button
                     onClick={toggleProfileMenu}
-                    className="flex items-center space-x-2 text-gray-700 hover:text-[#32C944] transition-colors"
+                    className="flex items-center space-x-2 text-gray-600 hover:text-[#32C944] transition-colors"
                   >
                     <User size={20} />
                     <span>John Doe</span>
